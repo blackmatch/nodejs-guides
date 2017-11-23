@@ -103,6 +103,32 @@ http.createServer((request, response) => {
 
 如果我们运行这个例子的代码，我们可以发送请求，但是得不到响应。事实上，如果你在浏览器上跑这个例子，会出现请求超时，因为没有任何东西返回给客户端。
 
+目前为止我们没有设计到任何关于`response`对象的内容，`response`对象是一个`ServerResponse`实例，是一个可写流。这个对象包含了很多给客户端发送数据的方法。我们稍后会谈到这些。
+
+HTTP状态码
+
+如果你不进行相关的设置，HTTP在响应的时候总是`200`。当然，并不是每一个HTTP响应都希望返回这个状态码，在一些特定的情况下，你可能需要设置一些不同的状态码。你可以通过设置`statusCode`属性来实现。
+
+```js
+response.statusCode = 404; // Tell the client that the resource wasn't found.
+```
+
+也有一些其他的快捷方式来实现，我们稍后会介绍。
+
+## 设置响应头
+
+通过`setHeader`方法，可以很方便的设置响应头。
+
+```js
+response.setHeader('Content-Type', 'application/json');
+response.setHeader('X-Powered-By', 'bacon');
+```
+
+在设置响应头的时候，名称是大小写敏感的。如果你重复设置了相应头，最后一个会把前面设置的值覆盖掉。
+
+
+
+
 
 
 
