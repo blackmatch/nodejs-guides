@@ -7,7 +7,6 @@
 * [入门指南](./guides/getting-started-guide.md)
 * [剖析一个HTTP事务](./guides/anatomy-of-an-http-transaction.md)
 
-
 ## 官方文档
 
 * [Getting Started Guide](https://nodejs.org/en/docs/guides/getting-started-guide/)

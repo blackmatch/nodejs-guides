@@ -1,10 +1,10 @@
 # 剖析一个HTTP事务
 
-这篇指南的目的是让我们深入理解Node.js处理HTTP的过程。我们假设你懂的通常情况下HTTP是如何运作的，这与语言和编程环境无关。我们也假设你对Node.js的`EventEmitters`和` Streams`有一定的了解。如果你不是很了解这些内容，很值得快速浏览一遍这些内容的API文档。
+这篇指南的目的是让我们深入理解Node.js处理HTTP的过程。我们假设你懂的通常情况下HTTP是如何运作的，这与语言和编程环境无关。我们也假设你对Node.js的`EventEmitters`和`Streams`有一定的了解。如果你不是很了解这些内容，很值得快速浏览一遍这些内容的API文档。
 
 ## 创建服务
 
-任意node网页服务程序在某种意义上都必须创建一个网页服务对象。可以通过` createServer`来实现。
+任意node网页服务程序在某种意义上都必须创建一个网页服务对象。可以通过`createServer`来实现。
 
 ```js
 const http = require('http');
@@ -14,7 +14,7 @@ const server = http.createServer((request, response) => {
 });
 ```
 
-`createServer`传入的是一个方法，当任何HTTP请求相应的服务时，这个方法就会被调用，我们称之为请求方法。实际上`createServer `返回的服务对象是一个`EventEmitter`，我们得到的只是一个创建服务的快捷方式，我们会在稍后添加一个监听器。
+`createServer`传入的是一个方法，当任何HTTP请求相应的服务时，这个方法就会被调用，我们称之为请求方法。实际上`createServer`返回的服务对象是一个`EventEmitter`，我们得到的只是一个创建服务的快捷方式，我们会在稍后添加一个监听器。
 
 ```js
 const server = http.createServer();
@@ -64,7 +64,7 @@ request.on('data', (chunk) => {
 
 > 注意：这样做可能有点啰嗦繁琐，但是大多数情况都是这么做的。幸运的是，在npm中，有很多像`concat-stream`和`body`这样的模块可以把这些繁琐的逻辑简化。再继续往下之前，好好理解这些原理是非常重要的，这也是你为什么读这篇指南的原因。
 
-快速理解错误
+## 快速理解错误
 
 由于`request`对象是一个可读流实例，也是一个`EventEmitter`实例，所以产生错误的行为也一样。
 
@@ -128,11 +128,133 @@ response.setHeader('X-Powered-By', 'bacon');
 
 ## 显式发送头数据
 
+上述谈到的设置头部消息状态码的方法我们称之为『隐式头部』。也就意味着，在发送主体数据之前，你是
+依赖node在正确的时间发送头部消息。
 
+只要你想，你可以明确地把头部信息写在响应流中。为了实现这点，有一个叫`writeHead`的方法，它可以
+把状态码和头部消息写到流中。
 
+```js
+response.writeHead(200, {
+  'Content-Type': 'application/json',
+  'X-Powered-By': 'bacon'
+});
+```
 
+一旦你设置了头部消息（不管是显式还是隐式），就已经做好了发送响应数据的准备了。
 
+## 发送响应主体
 
+由于`response`对象是可写流，写入响应数据发送到客户端只是一件调用通常的流方法的事而已。
 
+```js
+response.write('<html>');
+response.write('<body>');
+response.write('<h1>Hello, World!</h1>');
+response.write('</body>');
+response.write('</html>');
+response.end();
+```
 
+`end`方法在流中也可以接受一些数据（可选）作为最后一部分数据进行发送，所以上面的例子可以简化为：
 
+```js
+response.end('<html><body><h1>Hello, World!</h1></body></html>');
+```
+
+> 注意：在开始写数据块到主体之前，设置好状态码和头部消息是非常重要的。这是有理由的，因为头部消息
+会在发送主题数据之前先发送。
+
+## 再来快速过一下错误
+
+`response`流也可以提交`error`事件，而且在某些情况下，你必须处理好错误。所有关于`request`流
+的建议在这里都适用。
+
+## 整合起来
+
+现在我们已经学习了如何响应一个HTTP请求，现在我们把这些都整合起来。基于前面的例子，我们将创建一个
+服务端来实现，把用户发送的数据全部返回。我们会使用`JSON.stringify`把数据格式化成JSON格式。
+
+```js
+const http = require('http');
+
+http.createServer((request, response) => {
+  const { headers, method, url } = request;
+  let body = [];
+  request.on('error', (err) => {
+    console.error(err);
+  }).on('data', (chunk) => {
+    body.push(chunk);
+  }).on('end', () => {
+    body = Buffer.concat(body).toString();
+    // BEGINNING OF NEW STUFF
+
+    response.on('error', (err) => {
+      console.error(err);
+    });
+
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'application/json');
+    // Note: the 2 lines above could be replaced with this next one:
+    // response.writeHead(200, {'Content-Type': 'application/json'})
+
+    const responseBody = { headers, method, url, body };
+
+    response.write(JSON.stringify(responseBody));
+    response.end();
+    // Note: the 2 lines above could be replaced with this next one:
+    // response.end(JSON.stringify(responseBody))
+
+    // END OF NEW STUFF
+  });
+}).listen(8080);
+```
+
+## 一个回声服务端的例子
+
+我们把前面的例子简化一下，实现一个响应服务端，这个服务端仅仅将从请求中接收到的数据（不管是啥数据）
+直接返回。我们只需要做的就是，获取请求流中的数据，然后把这些数据写入到相应流中，类似于我们之前的
+操作。
+
+```js
+const http = require('http');
+
+http.createServer((request, response) => {
+  let body = [];
+  request.on('data', (chunk) => {
+    body.push(chunk);
+  }).on('end', () => {
+    body = Buffer.concat(body).toString();
+    response.end(body);
+  });
+}).listen(8080);
+```
+
+我们来修改一下上面的例子。我们只想发送一个回声消息，基于一下条件：
+
+* 使用POST请求
+* 请求路径是`/echo`
+
+其他任何情况下，我们让它简单返回一个404好了。
+
+```js
+const http = require('http');
+
+http.createServer((request, response) => {
+  if (request.method === 'POST' && request.url === '/echo') {
+    let body = [];
+    request.on('data', (chunk) => {
+      body.push(chunk);
+    }).on('end', () => {
+      body = Buffer.concat(body).toString();
+      response.end(body);
+    });
+  } else {
+    response.statusCode = 404;
+    response.end();
+  }
+}).listen(8080);
+```
+
+> 注意：使用这种方式来判别路径，我们称之为『路由』。其他实现路由的方式可以是`switch`语句，或者
+像`express`这样的复杂框架。如果你只是想实现路由功能，你可以试试`router`这个模块。
