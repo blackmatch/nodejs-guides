@@ -1,6 +1,6 @@
-# 安装完Node.js后我该如何开始使用它呢？
+# 安装完`Node.js`后该如何开始呢？
 
-如果你已经安装了Node，让我们开始构建第一个web服务端吧。创建一个文件，取名"app.js"，然后粘贴下面的代码到文件中：
+如果你已经安装了`Node`，我们开始构建第一个服务端程序吧。创建一个名为"app.js"的文件，然后粘贴下面的代码：
 
 ```js
 const http = require('http');
@@ -19,7 +19,5 @@ server.listen(port, hostname, () => {
 });
 ```
 
-然后，使用`node app.js`启动你的web服务端，访问[http://localhost:3000/](http://localhost:3000/)，你会看到一条'Hello World'消息。
-
-
-
+然后，使用`node app.js`命令启动程序，访问[http://localhost:3000/](http://localhost:3000/)，
+你会看到一条'Hello World'消息。

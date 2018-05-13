@@ -6,7 +6,7 @@
 
 ### 通用
 
-- [ ] 入门指南
+- [x] [入门指南](./guides/getting-started-guide.md)
 - [ ] 调试-入门指南
 - [ ] 简单剖析`Node.js`程序
 - [ ] `docker`化一个`Node.js`网页程序
